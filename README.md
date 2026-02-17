@@ -281,3 +281,73 @@ To test the **automatic update** flow:
 ## 🛠️ 9. Developer Tools
 - **[Passkit-Generator (npm)](https://www.npmjs.com/package/passkit-generator)**: The library we used in this project to sign passes in Node.js.
 - **[PKPass Validator](https://pkpassvalidator.com/)**: Use this to upload your `.pkpass` file and check for errors if it won't open on your phone.
+
+
+
+# 🍎 Apple Wallet Integration Guide (Flutter)
+
+This guide explains how to implement the "Add to Apple Wallet" feature in your Flutter app using the existing backend.
+
+## 1. Get the Download Link
+First, call the backend to get the unique link for the customer's pass.
+
+**Endpoint**: `GET {{baseUrl}}/customer/wallet/apple-wallet-link/:cardId`
+**Headers**: `Authorization: Bearer <Customer_JWT_Token>`
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "downloadLink": "https://your-api.com/api/customer/wallet/apple-wallet-pass/...",
+        "authenticationToken": "a1b2c3d4..."
+    }
+}
+```
+
+---
+
+## 2. Implementation in Flutter
+
+To show the "Add to Apple Wallet" card, you have two options:
+
+### Option A: Direct Download (Easiest)
+Use the [url_launcher](https://pub.dev/packages/url_launcher) package to open the `downloadLink` in the system browser (Safari).
+*   **Pros**: Safari automatically handles the `.pkpass` file and shows the "Add to Wallet" dialog.
+*   **Cons**: Briefly leaves the app.
+
+### Option B: Seamless (Best UX)
+Use the [apple_passkit](https://pub.dev/packages/apple_passkit) package.
+1. Download the file from `downloadLink` into memory (as `Uint8List`).
+2. Use the package to display the native "Add to Wallet" sheet inside your app.
+
+---
+
+## 3. How the "Automatic Update" Works
+You do **not** need to write any code for updates! 
+
+1. When the user successfully adds the pass to their Wallet, the **iPhone automatically communicates with the backend** in the background.
+2. The iPhone registers itself using the `authenticationToken` and `serialNumber` embedded inside the pass.
+3. When the customer earns points or claims a reward, our backend sends a silent push notification directly to the iPhone.
+4. The iPhone then automatically downloads the updated pass.
+
+---
+
+## 4. Requirement Checklist (iOS)
+Make sure your iOS developer or teammate has configured the following in the Apple Developer Portal and Xcode:
+
+1.  **Pass Type ID**: Must match `pass.com.aminpass.loyalty` (from our `.env`).
+2.  **App Entitlements**: Enable "Wallet" in your App ID entitlements.
+3.  **Certificates**: Ensure the `.p12` used by the backend is valid and matches the one used by the app.
+
+## 5. Summary Table
+
+| Step | Action | Endpoint |
+| :--- | :--- | :--- |
+| **1** | Get Metadata | `GET /apple-wallet-link/:cardId` |
+| **2** | Download Pass | Use `downloadLink` from Step 1 |
+| **3** | Update | Automatic (Success is handled by Backend + APNs) |
+
+---
+**Backend Note**: The binary file delivered by `apple-wallet-pass` is a MIME type `application/vnd.apple.pkpass`.
+
