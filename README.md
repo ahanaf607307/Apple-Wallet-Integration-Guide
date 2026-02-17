@@ -209,6 +209,73 @@ When iOS asks for updates (`GET /v1/devices/...`), it sends a query parameter ca
 - **If newer**: Return the serial number.
 - **If older**: Return **204 No Content**. This saves server bandwidth!
 
+
+# 🚀 Postman Testing Guide: Apple Wallet WWS
+
+This guide explains how to manually test your Apple Wallet Web Service (WWS) endpoints using Postman.
+
+---
+
+## 📍 Base Configuration
+- **Base URL**: `https://test13.fireai.agency/api/customer/apple-wallet-wws/v1` (or `http://localhost:8000/api/customer/apple-wallet-wws/v1`)
+- **Headers**: 
+  - `Authorization`: `ApplePass <authenticationToken>` (Get this from your `ApplePass` table in DB)
+  - `Content-Type`: `application/json`
+
+---
+
+## 1️⃣ Device Registration (POST)
+Simulates an iPhone adding the pass to the Wallet.
+
+- **Method**: `POST`
+- **URL**: `{{BaseURL}}/devices/:deviceId/registrations/:passType/:serial`
+- **Body (JSON)**:
+  ```json
+  {
+      "pushToken": "your_test_device_push_token"
+  }
+  ```
+- **Expected Response**: `201 Created` or `200 OK`.
+
+---
+
+## 2️⃣ Check for Updated Passes (GET)
+Simulates an iPhone checking if a pass has changed after receiving a push notification.
+
+- **Method**: `GET`
+- **URL**: `{{BaseURL}}/devices/:deviceId/registrations/:passType?passesUpdatedSince=2024-01-01T00:00:00Z`
+- **Expected Response**:
+  - `200 OK` with JSON: `{"lastUpdated": "...", "serialNumbers": ["..."]}`
+  - `204 No Content` (if nothing changed).
+
+---
+
+## 3️⃣ Download Latest Pass (GET)
+Simulates an iPhone downloading the updated `.pkpass` file.
+
+- **Method**: `GET`
+- **URL**: `{{BaseURL}}/passes/:passType/:serial`
+- **Expected Response**: Binary file (the `.pkpass` bundle).
+
+---
+
+## 4️⃣ Device Unregistration (DELETE)
+Simulates a user deleting the pass from their Wallet.
+
+- **Method**: `DELETE`
+- **URL**: `{{BaseURL}}/devices/:deviceId/registrations/:passType/:serial`
+- **Expected Response**: `200 OK`.
+
+---
+
+## 🛠️ Testing Tip
+To test the **automatic update** flow:
+1. Register a device using Postman (Step 1).
+2. Manually trigger a point update for that customer in your database.
+3. Observe your server logs to see if it tries to send a push via APNs.
+4. Manually hit the "Check for Updates" URL (Step 2) to see if your serial number is returned.
+
+
 ---
 
 ## 🛠️ 9. Developer Tools
